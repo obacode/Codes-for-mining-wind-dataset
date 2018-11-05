@@ -1,0 +1,749 @@
+%%%%%%%%% R CODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%% R code for cleaning the entire WRF dataset from 2000 – 2010. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Outlier screening for Braes of Doune WRF dataset
+Yussuff, Abdulmutalib
+Friday, July 28, 2017
+1.	Load library
+library("ggplot2", lib.loc="~/R/win-library/3.4")
+2.	Import data files
+setwd("C:/Users/Abdul2/Desktop/Resources/my work/RStudio")
+data.raw<-read.csv(file="tsdata_braesofduneCSV.csv",header=TRUE)
+View(data.raw)
+3.	Assign compatible column names
+new.names<-c("date_time","direction_deg.","windspeed_mps", "Power_norm")
+4.	Check new names
+cbind(names(data.raw),new.names)
+##                                     new.names       
+## [1,] "DateTime..yyyy.mm.dd..hr.00." "date_time"     
+## [2,] "Direction..deg.."             "direction_deg."
+## [3,] "Speed..m.s."                  "windspeed_mps" 
+## [4,] "Power_norm"                   "Power_norm"
+5.	Replace columns name
+names(data.raw)<-new.names
+6.	New data set to work with 
+data <- data.raw
+View(data)
+summary(data)
+##   date_time         direction_deg.  windspeed_mps       Power_norm    
+##  Length:96419       Min.   :  0.0   Min.   : 0.0421   Min.   :0.0000  
+##  Class :character   1st Qu.:133.0   1st Qu.: 4.7580   1st Qu.:0.0349  
+##  Mode  :character   Median :221.0   Median : 7.1957   Median :0.1684  
+##                     Mean   :200.7   Mean   : 7.5339   Mean   :0.3177  
+##                     3rd Qu.:265.0   3rd Qu.: 9.9030   3rd Qu.:0.5785  
+##                     Max.   :359.0   Max.   :27.1288   Max.   :1.0000  
+##                     NA's   :216     NA's   :216       NA's   :216
+Search for missing values
+check<-function(data){}
+7.	count NA (total missing values)
+NAs<-sum(is.na(data))
+print(paste("Missing Values:", NAs))
+## [1] "Missing Values: 648"
+8.	count incomplete dataset
+ok<-complete.cases(data)
+sum(ok)
+## [1] 96203
+print(paste("Incomplete Records:", sum(!ok)))
+## [1] "Incomplete Records: 216"
+9.	Show incomplete records (if less than 100 NAs).
+if(NAs > 0 & NAs <= 100) print( data[which(! complete.cases(data)), ] )
+10.	If more than 1, show column-wise distribution of NAs.
+if (NAs > 1) hist(which(is.na(data), arr.ind=TRUE)[,2], xlab="Column", freq=TRUE, breaks=1:dim(data)[2], main="Distribution of missing values by column")
+ 
+#NAs are present, and equally distributed in the 3 columns (see summary)
+summary(data)
+##   date_time         direction_deg.  windspeed_mps       Power_norm    
+##  Length:96419       Min.   :  0.0   Min.   : 0.0421   Min.   :0.0000  
+##  Class :character   1st Qu.:133.0   1st Qu.: 4.7580   1st Qu.:0.0349  
+##  Mode  :character   Median :221.0   Median : 7.1957   Median :0.1684  
+##                     Mean   :200.7   Mean   : 7.5339   Mean   :0.3177  
+##                     3rd Qu.:265.0   3rd Qu.: 9.9030   3rd Qu.:0.5785  
+##                     Max.   :359.0   Max.   :27.1288   Max.   :1.0000  
+##                     NA's   :216     NA's   :216       NA's   :216
+Remove missing values
+nrow.orig<-nrow(data)[1] 
+data<-na.omit(data) 
+nrow.new<-dim(data)[1] 
+remove(nrow.orig, nrow.new)
+summary(data)
+##   date_time         direction_deg.  windspeed_mps       Power_norm    
+##  Length:96203       Min.   :  0.0   Min.   : 0.0421   Min.   :0.0000  
+##  Class :character   1st Qu.:133.0   1st Qu.: 4.7580   1st Qu.:0.0349  
+##  Mode  :character   Median :221.0   Median : 7.1957   Median :0.1684  
+##                     Mean   :200.7   Mean   : 7.5339   Mean   :0.3177  
+##                     3rd Qu.:265.0   3rd Qu.: 9.9030   3rd Qu.:0.5785  
+##                     Max.   :359.0   Max.   :27.1288   Max.   :1.0000
+11.	Export cleaned data set to CSV file.
+write.csv(data, file="tsdata_NAs_removed2.csv")
+12.	Plot the wind speed time series vs. direction
+ggplot(data, aes(x=direction_deg.), colour=variable) + 
+  geom_point(aes(y=windspeed_mps, color="blue")) +
+  scale_y_continuous(name="Speed (m/s in 1hr intervals)", limit=c(0, max(data$windspeed_mps))) + 
+  scale_x_continuous(name="Direction (deg.)", limit=c(0, max(data$direction_deg.))) +
+    labs(title="Scatterplot of wind speed distribution by sectors") + 
+    theme_classic() +
+    theme(legend.position="")
+    
+    
+%%%%%%%% R code for cleaning the ELEXON and WRF dataset from 2009 – 2010. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+R code for Sorting Elexon and WRF dataset
+Abdulmutalib Yussuff
+August 12, 2017
+
+13.	Import Elexon_WRF dataset and do summary statistics
+setwd("C:/Users/Abdul2/Desktop/Resources/my work/RStudio")
+Elexon_WRF<-read.csv(file="elexon_and_wrf.csv",header=TRUE)
+View(Elexon_WRF)
+summary (Elexon_WRF)
+##  Period.start           Elexon              WRF        
+##  Length:17520       Min.   :-0.00818   Min.   :0.0000  
+##  Class :character   1st Qu.: 0.01676   1st Qu.:0.0292  
+##  Mode  :character   Median : 0.12486   Median :0.1411  
+##                     Mean   : 0.23395   Mean   :0.2862  
+##                     3rd Qu.: 0.36743   3rd Qu.:0.5065  
+##                     Max.   : 0.96480   Max.   :1.0000  
+##                     NA's   :243        NA's   :243
+14.	Check for missing values
+check<-function(Elexon_WRF){}
+15.	count NA (total missing values)
+NAs<-sum(is.na(Elexon_WRF))
+print(paste("Missing Values:", NAs))
+## [1] "Missing Values: 486"
+16.	count incomplete records (rows containing missing values)
+ok<-complete.cases(Elexon_WRF)
+sum(ok)
+## [1] 17277
+print(paste("Incomplete Records:", sum(!ok)))
+## [1] "Incomplete Records: 243"
+17.	Show incomplete records (if less than 100 NAs).
+if(NAs > 0 & NAs <= 100) print( Elexon_WRF[which(! complete.cases(Elexon_WRF)), ] )
+18.	If more than 100, show column-wise distribution of NAs.
+if (NAs > 1) hist(which(is.na(Elexon_WRF), arr.ind=TRUE)[,2], xlab="Column", freq=TRUE, breaks=1:dim(Elexon_WRF)[2], main="Distribution of missing values by column")
+ 
+Remove missing values using 'na.omit' function {stats package} to create a clean datset
+19.	Apply the removed function to compare the Elexon_WRF dataset frames.
+nrow.orig<-nrow(Elexon_WRF)[1] # record the dimensions of the Elexon_WRF (before removing anything!)
+Elexon_WRF<-na.omit(Elexon_WRF) # omit rows containing missing values
+nrow.new<-dim(Elexon_WRF)[1] # record the new dimensions of the Elexon_WRF (after removing NA)
+remove(nrow.orig, nrow.new) # check how many records have been removed
+summary(Elexon_WRF)
+##  Period.start           Elexon               WRF        
+##  Length:17277       Min.   :-0.008176   Min.   :0.0000  
+##  Class :character   1st Qu.: 0.016757   1st Qu.:0.0292  
+##  Mode  :character   Median : 0.124865   Median :0.1411  
+##                     Mean   : 0.233952   Mean   :0.2862  
+##                     3rd Qu.: 0.367432   3rd Qu.:0.5065  
+##                     Max.   : 0.964797   Max.   :1.0000
+21	Write the cleaned dataset to a csv output file
+write.csv(Elexon_WRF, file="Elexon_WRF_cleaned.csv")
+
+
+%%%%%%%%% MATLAB CODE for WRF and coupled model data mining %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Dataset import
+wind1 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs1.csv', 14,6);
+wind2 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs2.csv', 14,6);
+wind3 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs3.csv', 14,6);
+wind4 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs4.csv', 14,6);
+wind5 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs5.csv', 14,6);
+wind6 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs6.csv', 14,6);
+wind7 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs7.csv', 14,6);
+wind8 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs8.csv', 14,6);
+wind9 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs9.csv', 14,6);
+wind10 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs10.csv', 14,6);
+wind11 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs11.csv', 14,6);
+wind12 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs12.csv', 14,6);
+wind13 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs13.csv', 14,6);
+wind14 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs14.csv', 14,6);
+wind15 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs15.csv', 14,6);
+wind16 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs16.csv', 14,6);
+wind17 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs17.csv', 14,6);
+wind18 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs18.csv', 14,6);
+wind19 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs19.csv', 14,6);
+wind20 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs20.csv', 14,6);
+wind21 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs21.csv', 14,6);
+wind22 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs22.csv', 14,6);
+wind23 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs23.csv', 14,6);
+wind24 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs24.csv', 14,6);
+wind25 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs25.csv', 14,6);
+wind26 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs26.csv', 14,6);
+wind27 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs27.csv', 14,6);
+wind28 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs28.csv', 14,6);
+wind29 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs29.csv', 14,6);
+wind30 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs30.csv', 14,6);
+wind31 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs31.csv', 14,6);
+wind32 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs32.csv', 14,6);
+wind33 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs33.csv', 14,6);
+wind34 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs34.csv', 14,6);
+wind35 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs35.csv', 14,6);
+wind36 = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecs_wecs36.csv', 14,6);
+wind_all = csvread('powerhistory_clim_tsdataBraesofDune_80m_to_wecsALL.csv', 10,6);
+wrf_data = csvread('productiondata_braesofdoune.csv', 1,2);
+Vestas_powercurve = csvread('V80_2MW-power-curve.csv', 1,0);
+Elexon_wrf = csvread('Elexon_WRF_cleaned.csv',1,1);
+
+%% Normalize power curve for microscale data
+
+P_rated = 2000; % kW rating of each V80 turbine
+P1_norm = (1/P_rated)*(wind1(:,3));
+P2_norm = (1/P_rated)*(wind2(:,3));
+P3_norm = (1/P_rated)*(wind3(:,3));
+P4_norm = (1/P_rated)*(wind4(:,3));
+P5_norm = (1/P_rated)*(wind5(:,3));
+P6_norm = (1/P_rated)*(wind6(:,3));
+P7_norm = (1/P_rated)*(wind7(:,3));
+P8_norm = (1/P_rated)*(wind8(:,3));
+P9_norm = (1/P_rated)*(wind9(:,3));
+P10_norm = (1/P_rated)*(wind10(:,3));
+P11_norm = (1/P_rated)*(wind11(:,3));
+P12_norm = (1/P_rated)*(wind12(:,3));
+P13_norm = (1/P_rated)*(wind13(:,3));
+P14_norm = (1/P_rated)*(wind14(:,3));
+P15_norm = (1/P_rated)*(wind15(:,3));
+P16_norm = (1/P_rated)*(wind16(:,3));
+P17_norm = (1/P_rated)*(wind17(:,3));
+P18_norm = (1/P_rated)*(wind18(:,3));
+P19_norm = (1/P_rated)*(wind19(:,3));
+P20_norm = (1/P_rated)*(wind20(:,3));
+P21_norm = (1/P_rated)*(wind21(:,3));
+P22_norm = (1/P_rated)*(wind22(:,3));
+P23_norm = (1/P_rated)*(wind23(:,3));
+P24_norm = (1/P_rated)*(wind24(:,3));
+P25_norm = (1/P_rated)*(wind25(:,3));
+P26_norm = (1/P_rated)*(wind26(:,3));
+P27_norm = (1/P_rated)*(wind27(:,3));
+P28_norm = (1/P_rated)*(wind28(:,3));
+P29_norm = (1/P_rated)*(wind29(:,3));
+P30_norm = (1/P_rated)*(wind30(:,3));
+P31_norm = (1/P_rated)*(wind31(:,3));
+P32_norm = (1/P_rated)*(wind32(:,3));
+P33_norm = (1/P_rated)*(wind33(:,3));
+P34_norm = (1/P_rated)*(wind34(:,3));
+P35_norm = (1/P_rated)*(wind35(:,3));
+P36_norm = (1/P_rated)*(wind36(:,3));
+P_aggr_norm = (1/(36*P_rated))*(wind_all(:,37));
+P_vestas_norm = (1/P_rated)*(Vestas_powercurve(:,2));
+P_wrf_norm = wrf_data(:,3);
+% New set
+P_wrf09010 = Elexon_wrf(:,4);
+P_elexon_0910 = Elexon_wrf(:,3);
+P_coupled_0910 = Elexon_wrf (:,8);
+
+RMSE1 = sqrt((sum(P_elexon_0910 - P_coupled_0910).^2)/N)
+RMSE2 = sqrt((sum(P_elexon_0910 - P_wrf09010).^2)/N)
+
+%% New power curve per turbine and farm-wide
+plot(wind31(:,2),P31_norm,'.', Vestas_powercurve(:,1),P_vestas_norm,'o');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+hold on
+plot(wind36(:,2),P_aggr_norm);
+
+
+% % WRF, aggregate, and warranted power curve
+plot(wrf_data(:,2), P_wrf_norm,'.',wind24(:,2),P_aggr_norm,'.',Vestas_powercurve(:,1),P_vestas_norm, 'r')
+xlabel('Wind speed (m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, aggregate, and warranted power curves');
+legend('WRF','Aggregate','Warranted');
+
+% WRF-based and warranted power curve 
+plot(wrf_data(:,2),P_wrf_norm,'.', Vestas_powercurve(:,1),P_vestas_norm,'r')
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF and warranted power curves');
+legend('WRF-based', 'Warranted')
+
+% WRF matched against power curve for each wec 
+plot(wrf_data(:,2),P_wrf_norm,'.',wind1(:,2),P1_norm,'o', Vestas_powercurve(:,1),P_vestas_norm,'d')
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, WEC1, and warranted power curves');
+
+% Sectoral power curves based on directions
+Aggr = table(wind24(:,1),wind24(:,2),P_aggr_norm,'Variablenames', {'dir','speed', 'power'});
+
+%  Sorting columns 2 and 3 with reference to column1 or sector
+Aggr_sorted = sortrows(Aggr,1);
+
+% Aggregate dataset to directional dataset for 0 - 90 deg.
+subplot(2,2,1)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(1:3887),Aggr_sorted.power(1:3887), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 0 deg.');
+legend('WRF', 'Sector 0 deg.', 'Warranted')
+subplot(2,2,2)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(3888:8709),Aggr_sorted.power(3888:8709), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 30 deg.');
+legend('WRF', 'Sector 30 deg.', 'Warranted')
+subplot(2,2,3)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(8710:15555),Aggr_sorted.power(8710:15555), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 60 deg.');
+legend('WRF', 'Sector 60 deg.', 'Warranted')
+subplot(2,2,4)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(15556:21575),Aggr_sorted.power(15556:21575), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 90 deg.');
+legend('WRF', 'Sector 90 deg.', 'Warranted')
+
+% Aggregate dataset to directional dataset for 120 - 210 deg.
+subplot(2,2,1)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(21576:26576),Aggr_sorted.power(21576:26576), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 120 deg.');
+legend('WRF', 'Sector 120 deg.', 'Warranted')
+subplot(2,2,2)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(26577:32746),Aggr_sorted.power(26577:32746), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 150 deg.');
+legend('WRF', 'Sector 150 deg.', 'Warranted')
+subplot(2,2,3)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(32747:41811),Aggr_sorted.power(32747:41811), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 180 deg.');
+legend('WRF', 'Sector 180 deg.', 'Warranted')
+subplot(2,2,4)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(41812:57300),Aggr_sorted.power(41812:57300), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 210 deg.');
+legend('WRF', 'Sector 210 deg.', 'Warranted')
+
+% Aggregate dataset to directional dataset for 240 - 330 deg.
+subplot(2,2,1)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(57301:73218),Aggr_sorted.power(57301:73218), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 240 deg.');
+legend('WRF', 'Sector 240 deg.', 'Warranted')
+subplot(2,2,2)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(73219:83558),Aggr_sorted.power(73219:83558), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 270 deg.');
+legend('WRF', 'Sector 270 deg.', 'Warranted')
+subplot(2,2,3)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(83559:89811),Aggr_sorted.power(83559:89811), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 300 deg.');
+legend('WRF', 'Sector 300 deg.', 'Warranted')
+subplot(2,2,4)
+plot(wrf_data(:,2),P_wrf_norm,'.r',Aggr_sorted.speed(89812:96179),Aggr_sorted.power(89812:96179), 'y.', Vestas_powercurve(:,1),P_vestas_norm,'k-.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('WRF, Warranted, and sectoral power curves at 330 deg.');
+legend('WRF', 'Sector 330 deg.', 'Warranted')
+
+% % Sectoral power curves compared
+plot(Aggr_sorted.speed(1:3887),Aggr_sorted.power(1:3887),'.',Aggr_sorted.speed(3888:8709),Aggr_sorted.power(3888:8709), '.',Aggr_sorted.speed(8710:15555),Aggr_sorted.power(8710:15555), '.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('Sectoral power curves at 0 - 330 deg.');
+legend('Sector 0 deg.', 'Sector 30 deg.','Sector 60 deg.')
+
+
+plot(Aggr_sorted.speed(1:3887),Aggr_sorted.power(1:3887),'.',Aggr_sorted.speed(15556:21575),Aggr_sorted.power(15556:21575), '.',Aggr_sorted.speed(32747:41811),Aggr_sorted.power(32747:41811), '.',Aggr_sorted.speed(73219:83558),Aggr_sorted.power(73219:83558),'.');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('Sectoral power curves at 0, 90, 180, 270 deg.');
+legend('Sector 0 deg.', 'Sector 90 deg.','Sector 180 deg.','Sector 270 deg.');
+
+%  Sorting columns 2 and 3 with reference to column1 or sector
+samdata = csvread('tsdata_NAs_removed2.csv', 0,1);
+SAM_sorted = sortrows(samdata,1);
+
+plot(SAM_sorted(1:4435,2),SAM_sorted(1:4435,3),'.',Aggr_sorted.speed(1:3887),Aggr_sorted.power(1:3887),'.',Vestas_powercurve(:,1),P_vestas_norm,'r');
+xlabel('wind speed(m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('Sectoral power curves at 0 deg.');
+legend('SAM','WindSim', 'Vestas')
+
+nbins=50;
+hist_power_0=hist(Aggr_sorted.power(1:3887), 50);
+hist_speed_0=hist(Aggr_sorted.speed(1:3887), 50);
+hist_power_0;
+hist_speed_0;
+pd_power_0=fitdist(Aggr_sorted.power(1:3887), 'normal');
+pdf_power_0 = pdf('', Aggr_sorted.power(1:3887), 10);
+fplot(Aggr_sorted.power(1:3887), [0 30])
+
+
+% % Vertical profiles of speed(m/s) across sectors
+vert1 = csvread('vertical_profile_used.csv',1,1);
+plot(VarName6(1:12,:),VarName2(1:12,:),'r');
+hold on
+plot(VarName6(13:24,:),VarName2(13:24,:),'--');
+hold on
+plot(VarName6(25:36,:),VarName2(25:36,:),'');
+hold on
+plot(VarName6(37:48,:),VarName2(37:48,:),':');
+hold on
+plot(VarName6(49:60,:),VarName2(49:60,:),'');
+hold on
+plot(VarName6(61:72,:),VarName2(61:72,:),'');
+hold on
+plot(VarName6(73:84,:),VarName2(73:84,:),'--');
+hold on
+plot(VarName6(85:96,:),VarName2(85:96,:),'');
+hold on
+plot(VarName6(97:108,:),VarName2(97:108,:),'');
+hold on
+plot(VarName6(109:120,:),VarName2(109:120,:),'d');
+hold on
+plot(VarName6(121:132,:),VarName2(121:132,:),'');
+hold on
+plot(VarName6(133:144,:),VarName2(133:144,:),'o');
+xlabel('wind speed, U(m/s)');
+ylabel('Vertical height, Z(m)');
+title('Vertical profile of wind speed at turbine 1 across sectors');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+% % Vertical profiles of inflow(deg) across sectors
+
+plot(VarName7(1:12,:),VarName2(1:12,:),'r');
+hold on
+plot(VarName7(13:24,:),VarName2(13:24,:),'--');
+hold on
+plot(VarName7(25:36,:),VarName2(25:36,:),'');
+hold on
+plot(VarName7(37:48,:),VarName2(37:48,:),':');
+hold on
+plot(VarName7(49:60,:),VarName2(49:60,:),'');
+hold on
+plot(VarName7(61:72,:),VarName2(61:72,:),'');
+hold on
+plot(VarName7(73:84,:),VarName2(73:84,:),'--');
+hold on
+plot(VarName7(85:96,:),VarName2(85:96,:),'');
+hold on
+plot(VarName7(97:108,:),VarName2(97:108,:),'');
+hold on
+plot(VarName7(109:120,:),VarName2(109:120,:),'d');
+hold on
+plot(VarName7(121:132,:),VarName2(121:132,:),'');
+hold on
+plot(VarName7(133:144,:),VarName2(133:144,:),'o');
+xlabel('Inflow angle, beta(deg.)');
+ylabel('Vertical height, Z(m)');
+title('Vertical profile of Inflow angle at turbine 1 across sectors');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+% % Vertical profiles of shear(1/s) across sectors
+
+plot(VarName8(1:12,:),VarName2(1:12,:),'r');
+hold on
+plot(VarName8(13:24,:),VarName2(13:24,:),'--');
+hold on
+plot(VarName8(25:36,:),VarName2(25:36,:),'');
+hold on
+plot(VarName8(37:48,:),VarName2(37:48,:),':');
+hold on
+plot(VarName8(49:60,:),VarName2(49:60,:),'');
+hold on
+plot(VarName8(61:72,:),VarName2(61:72,:),'');
+hold on
+plot(VarName8(73:84,:),VarName2(73:84,:),'--');
+hold on
+plot(VarName8(85:96,:),VarName2(85:96,:),'');
+hold on
+plot(VarName8(97:108,:),VarName2(97:108,:),'');
+hold on
+plot(VarName8(109:120,:),VarName2(109:120,:),'d');
+hold on
+plot(VarName8(121:132,:),VarName2(121:132,:),'');
+hold on
+plot(VarName8(133:144,:),VarName2(133:144,:),'o');
+xlabel('Shear, U_s_h(1/s)');
+ylabel('Vertical height, Z(m)');
+title('Vertical profile of Wind shear at turbine 1 across sectors');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+% % Vertical profiles of TKE(m2/s2)
+
+plot(VarName11(1:12,:),VarName2(1:12,:),'r');
+hold on
+plot(VarName11(13:24,:),VarName2(13:24,:),'');
+hold on
+plot(VarName11(25:36,:),VarName2(25:36,:),'');
+hold on
+plot(VarName11(37:48,:),VarName2(37:48,:),':');
+hold on
+plot(VarName11(49:60,:),VarName2(49:60,:),'');
+hold on
+plot(VarName11(61:72,:),VarName2(61:72,:),'');
+hold on
+plot(VarName11(73:84,:),VarName2(73:84,:),'--');
+hold on
+plot(VarName11(85:96,:),VarName2(85:96,:),'--');
+hold on
+plot(VarName11(97:108,:),VarName2(97:108,:),'');
+hold on
+plot(VarName11(109:120,:),VarName2(109:120,:),'d');
+hold on
+plot(VarName11(121:132,:),VarName2(121:132,:),'');
+hold on
+plot(VarName11(133:144,:),VarName2(133:144,:),'');
+xlabel('Turbulent kinetic energy, TKE(m^2/s^2)');
+ylabel('Vertical height, Z(m)');
+title('Vertical profile of TKE at turbine 1 across sectors');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+% % Vertical profiles of TI(%)
+
+plot(VarName12(1:12,:),VarName2(1:12,:),'r');
+hold on
+plot(VarName12(13:24,:),VarName2(13:24,:),'');
+hold on
+plot(VarName12(25:36,:),VarName2(25:36,:),'');
+hold on
+plot(VarName12(37:48,:),VarName2(37:48,:),':');
+hold on
+plot(VarName12(49:60,:),VarName2(49:60,:),'');
+hold on
+plot(VarName12(61:72,:),VarName2(61:72,:),'');
+hold on
+plot(VarName12(73:84,:),VarName2(73:84,:),'--');
+hold on
+plot(VarName12(85:96,:),VarName2(85:96,:),'--');
+hold on
+plot(VarName12(97:108,:),VarName2(97:108,:),'');
+hold on
+plot(VarName12(109:120,:),VarName2(109:120,:),'d');
+hold on
+plot(VarName12(121:132,:),VarName2(121:132,:),'');
+hold on
+plot(VarName12(133:144,:),VarName2(133:144,:),'');
+xlabel('Turbulence Intensity, TI(%)');
+ylabel('Vertical height, Z(m)');
+title('Vertical profile of TI at turbine 1 across sectors');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+% % Vertical profiles of Wind shear exponent, alpha
+
+plot(VarName13(1:12,:),VarName2(1:12,:),'r');
+hold on
+plot(VarName13(13:24,:),VarName2(13:24,:),'--');
+hold on
+plot(VarName13(25:36,:),VarName2(25:36,:),'');
+hold on
+plot(VarName13(37:48,:),VarName2(37:48,:),':');
+hold on
+plot(VarName13(49:60,:),VarName2(49:60,:),'');
+hold on
+plot(VarName13(61:72,:),VarName2(61:72,:),'');
+hold on
+plot(VarName13(73:84,:),VarName2(73:84,:),'--');
+hold on
+plot(VarName13(85:96,:),VarName2(85:96,:),'--');
+hold on
+plot(VarName13(97:108,:),VarName2(97:108,:),'');
+hold on
+plot(VarName13(109:120,:),VarName2(109:120,:),'d');
+hold on
+plot(VarName13(121:132,:),VarName2(121:132,:),'');
+hold on
+plot(VarName13(133:144,:),VarName2(133:144,:),'');
+xlabel('Shear exponent, alpha');
+ylabel('Vertical height, Z(m)');
+title('Vertical profile of shear exponent at turbine 1 across sectors');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+%% Vertical profiles of Wind shear exponent, alpha
+
+plot(VarName6(1:12,:),VarName12(1:12,:),'r');
+hold on
+plot(VarName6(13:24,:),VarName12(13:24,:),'--');
+hold on
+plot(VarName6(25:36,:),VarName12(25:36,:),'');
+hold on
+plot(VarName6(37:48,:),VarName12(37:48,:),':');
+hold on
+plot(VarName6(49:60,:),VarName12(49:60,:),'');
+hold on
+plot(VarName6(61:72,:),VarName12(61:72,:),'');
+hold on
+plot(VarName6(73:84,:),VarName12(73:84,:),'--');
+hold on
+plot(VarName6(85:96,:),VarName12(85:96,:),'--');
+hold on
+plot(VarName6(97:108,:),VarName12(97:108,:),'');
+hold on
+plot(VarName6(109:120,:),VarName12(109:120,:),'d');
+hold on
+plot(VarName6(121:132,:),VarName12(121:132,:),'');
+hold on
+plot(VarName6(133:144,:),VarName12(133:144,:),'');
+xlabel('Wind speed, U(m.s^-^1)');
+ylabel('Turbulence intensity, TI(%)');
+title('Variation of turbulence intensity with wind speed across sectors of turbine 1');
+legend('0 deg.', '30 deg.','60 deg.','90 deg.','120 deg.','150 deg.','180 deg.','210 deg.','240 deg.','270 deg.','300 deg.','330 deg.');
+
+% 
+Elexon_wrf = csvread('Elexon_WRF_cleaned.csv',1,1);
+P_wrf09010 = Elexon_wrf(:,4);
+P_elexon_0910 = Elexon_wrf(:,3);
+P_coupled_0910 = Elexon_wrf (:,8);
+Elexon0910_sorted = sortrows(Elexon_wrf(:,1:4),1);
+Coupled0910_sorted= sortrows(Elexon_wrf(:,5:8),1);
+
+
+plot (Elexon_wrf(:,2),Elexon_wrf(:,3),'.',Elexon_wrf(:,2),Elexon_wrf(:,4),'v', Elexon_wrf(:,6),Elexon_wrf(:,8),'.',Vestas_powercurve(:,1),P_vestas_norm,'r');
+xlabel('Wind speed (m/s)');
+ylabel('Normalized power (P/P-rated)');
+title('Compare power curves from WRF, Elexon, Vestas, and Coupled model');
+legend('ELEXON','WRF','Coupled model','Vestas');
+% % % 
+
+% % % Compare directional power curve per sector with ELEXON
+% % Aggregate dataset to directional dataset for 0 - 90 deg.
+% subplot(2,2,1)
+% plot(Elexon0910_sorted(1:928,2),Elexon0910_sorted(1:928,3),'.r',Coupled0910_sorted(1:820,2),Coupled0910_sorted(1:820,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 0 -29.9 deg. sector');
+% legend('ELEXON','Sector 0-29.9 deg.')
+% subplot(2,2,2)
+% plot(Elexon0910_sorted(929:2091,2),Elexon0910_sorted(929:2091,3),'.r',Coupled0910_sorted(821:1921,2),Coupled0910_sorted(821:1921,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 30 -59.9 deg. sector');
+% legend('ELEXON','Sector 30-59.9 deg.')
+% subplot(2,2,3)
+% plot(Elexon0910_sorted(2092:3364,2),Elexon0910_sorted(2092:3364,3),'.r',Coupled0910_sorted(1922:3212,2),Coupled0910_sorted(1922:3212,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 60 -89.9 deg. sector');
+% legend('ELEXON','Sector 60-89.9 deg.')
+% subplot(2,2,4)
+% plot(Elexon0910_sorted(3365:4304,2),Elexon0910_sorted(3365:4304,3),'.r',Coupled0910_sorted(3213:4226,2),Coupled0910_sorted(3213:4226,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 90 -119.9 deg. sector');
+% legend('ELEXON','Sector 90-119.9 deg.')
+
+% % Aggregate dataset to directional dataset for 120 - 210 deg.
+% subplot(2,2,1)
+% plot(Elexon0910_sorted(4305:5110,2),Elexon0910_sorted(4305:5110,3),'.r',Coupled0910_sorted(4227:5061,2),Coupled0910_sorted(4227:5061,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 120 -149.9 deg. sector');
+% legend('ELEXON','Sector 120-149.9 deg.')
+% subplot(2,2,2)
+% plot(Elexon0910_sorted(5111:6203,2),Elexon0910_sorted(5111:6203,3),'.r',Coupled0910_sorted(5062:6143,2),Coupled0910_sorted(5062:6143,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 150 -179.9 deg. sector');
+% legend('ELEXON','Sector 150-179.9 deg.')
+% subplot(2,2,3)
+% plot(Elexon0910_sorted(6204:8012,2),Elexon0910_sorted(6204:8012,3),'.r',Coupled0910_sorted(6144:7904,2),Coupled0910_sorted(6144:7904,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 180 -209.9 deg. sector');
+% legend('ELEXON','Sector 180-209.9 deg.')
+% subplot(2,2,4)
+% plot(Elexon0910_sorted(8013:10600,2),Elexon0910_sorted(8013:10600,3),'.r',Coupled0910_sorted(7905:10312,2),Coupled0910_sorted(7905:10312,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 210 -239.9 deg. sector');
+% legend('ELEXON','Sector 210-239.9 deg.')
+
+% % Aggregate dataset to directional dataset for 240 - 330 deg.
+% subplot(2,2,1)
+% plot(Elexon0910_sorted(10601:13359,2),Elexon0910_sorted(10601:13359,3),'.r',Coupled0910_sorted(10313:13184,2),Coupled0910_sorted(10313:13184,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 240 -269.9 deg. sector');
+% legend('ELEXON','Sector 240-269.9 deg.')
+% subplot(2,2,2)
+% plot(Elexon0910_sorted(13360:14969,2),Elexon0910_sorted(13360:14969,3),'.r',Coupled0910_sorted(13185:14936,2),Coupled0910_sorted(13185:14936,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 270 -299.9 deg. sector');
+% legend('ELEXON','Sector 270-299.9 deg.')
+% subplot(2,2,3)
+% plot(Elexon0910_sorted(14970:16121,2),Elexon0910_sorted(14970:16121,3),'.r',Coupled0910_sorted(14937:16082,2),Coupled0910_sorted(14937:16082,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 300 -329.9 deg. sector');
+% legend('ELEXON','Sector 300-329.9 deg.')
+% subplot(2,2,4)
+% plot(Elexon0910_sorted(16122:17271,2),Elexon0910_sorted(16122:17271,3),'.r',Coupled0910_sorted(16083:17271,2),Coupled0910_sorted(16083:17271,4),'y.');
+% xlabel('wind speed(m/s)');
+% ylabel('Normalized power (P/P-rated)');
+% title('Directional power curve compare with ELEXON at 330 -359.9 deg. sector');
+% legend('ELEXON','Sector 330-359.9 deg.')
+
+% % %  Statistical correlation and error analyses
+% N = size(Elexon_wrf,1);
+% MBE = (1/N);
+% 
+% pd1 = fitdist(Elexon0910_sorted(16122:17271,3), 'Weibull');
+% pd2 = fitdist(Coupled0910_sorted(16083:17271,4), 'Normal');
+% 
+% % % % % % % % % 
+% % Search for distribution that best fits the power curves
+% dfittool(P_elexon_0910)
+% dfittool(P_coupled_0910)
+% 
+% % Kernel gives best fit for power. So, apply kernel smoothing function.
+% Elexon_wrf(:,2),Elexon_wrf(:,3)
+% [f1,x1] = ksdensity(P_elexon_0910);
+% [f2,x2] = ksdensity(P_coupled_0910);
+% dfittool(f1)
+% dfittool(f2)
+% % 
+% plot(x1,f1)
+% hold on
+% plot(x2,f2)
+% hold off
+% xlabel('Normalized power, CF');
+% ylabel('Density');
+% title('Probability Density Function (PDF)');
+% legend('PDF for ELEXON', 'PDF for coupled model');
+% 
+% histfit(f1)
+% histfit(f2)
+% 
+% 
+% % % % % % % % % 
+% 
+% subplot(1,2,1)
+% histogram(Elexon0910_sorted(16122:17271,3),50);
+% subplot(1,2,2)
+% hist(Coupled0910_sorted(16083:17271,4),50);
+% 
+% subplot(1,2,1)
+% histogram(Elexon0910_sorted(:,3),100);
+% subplot(1,2,2)
+% hist(Coupled0910_sorted(:,4),100);
+% 
+% % rmse_new = sqrt((sum(P_elexon_0910 - P_coupled_0910)^2)/N)
+% 
+% % error=rms_error(Elexon0910_sorted(16122:17271,3),Coupled0910_sorted(16083:17271,4));
+% % 
+% % rmse_all_coupled = sqrt(sum(Elexon0910_sorted(1:17271,3)-Coupled0910_sorted(1:17271,4)).^2)/(numel(Coupled0910_sorted(1:17271,4)))
+% % mbe_all_coupled = (1/numel)*(sum((Coupled0910_sorted(1:17271,4)-Elexon0910_sorted(1:17271,3))/Elexon0910_sorted(1:17271,3)))
+% % 
+% % rmse_all = sqrt((sum((Elexon0910_sorted(1:17271,3)-Coupled0910_sorted(1:17271,4))^2))/N)
+% % 
+% % e=((Elexon0910_sorted(1:17271,3)-Coupled0910_sorted(1:17271,4))/(Elexon0910_sorted(1:17271,3)))^2
+% % e2=rms(A)
+% % e3=rms(B)
+% 
+% % % Root mean square error
+% A= Elexon0910_sorted(1:17271,3);
+% B= Coupled0910_sorted(1:17271,4);
+% % C=(A-B).^2
+% % RMSE = sqrt(sum(C)/17271)
+% MBE = sum(B-A)/N
+
